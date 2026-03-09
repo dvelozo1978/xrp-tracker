@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#060912" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="XRP Tracker" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <title>XRP Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1b3e;
+      --card: rgba(255,255,255,0.07);
+      --border: rgba(255,255,255,0.15);
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.75);
+      --blue: #7dd3fc;
+      --green: #6ee7b7;
+      --red: #fca5a5;
+      --yellow: #fde68a;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'IBM Plex Mono', monospace;
+      overflow-x: hidden;
+    }
+
+    body {
+      padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0)
+               env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+    }
+
+    .app {
+      max-width: 430px;
+      margin: 0 auto;
+      padding: 28px 20px 40px;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 28px;
+    }
+    .header-title {
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .header-name {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .header-name span { color: var(--blue); }
+    .header-right { text-align: right; }
+    .live-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      justify-content: flex-end;
+      margin-bottom: 6px;
+    }
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      position: relative;
+    }
+    .dot::before {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      background: var(--green);
+      opacity: 0.3;
+      animation: ping 1.5s ease-in-out infinite;
+    }
+    .dot.error { background: var(--red); }
+    .dot.error::before { background: var(--red); animation: none; }
+    .dot.loading { background: var(--yellow); }
+    .dot.loading::before { background: var(--yellow); }
+    .live-label { font-size: 12px; color: var(--muted); }
+    .countdown { font-size: 11px; color: rgba(255,255,255,0.6); }
+
+    /* ── Card ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      margin-bottom: 12px;
+    }
+
+    /* ── Price card ── */
+    .price-card { padding: 28px 24px; position: relative; overflow: hidden; }
+    .price-glow {
+      position: absolute;
+      top: -50px; right: -50px;
+      width: 180px; height: 180px;
+      border-radius: 50%;
+      filter: blur(50px);
+      pointer-events: none;
+      transition: background 0.5s;
+    }
+    .price-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .price-value {
+      font-size: 44px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .price-usd { font-size: 11px; color: var(--muted); margin-top: 6px; }
+    .change-badge {
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 10px;
+      padding: 5px 12px;
+      margin-bottom: 6px;
+    }
+    .change-label { font-size: 9px; color: rgba(255,255,255,0.25); text-align: center; }
+
+    /* ── Sparkline ── */
+    #sparkline { display: block; width: 100%; height: 60px; }
+
+    /* ── Skeleton ── */
+    .skeleton {
+      background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 8px;
+    }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
+    /* ── Sentiment card ── */
+    .sentiment-card { padding: 18px 20px; }
+    .sentiment-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .sentiment-badge {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      border-radius: 8px;
+      padding: 5px 14px;
+    }
+    .ai-tag { font-size: 11px; color: rgba(255,255,255,0.5); margin-left: auto; }
+    .analysis-text {
+      font-size: 13px;
+      color: rgba(255,255,255,0.85);
+      line-height: 1.8;
+      font-style: italic;
+    }
+
+    /* ── Stats row ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .stat-card { padding: 16px; border-radius: 16px; }
+    .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 6px; }
+    .stat-value { font-size: 18px; font-weight: 600; }
+    .stat-sub { font-size: 9px; color: rgba(255,255,255,0.25); margin-top: 4px; }
+
+    /* ── History chart ── */
+    .history-card { padding: 18px 20px; }
+    .section-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 16px; }
+    .bars { display: flex; align-items: flex-end; gap: 5px; height: 70px; }
+    .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .bar { width: 100%; border-radius: 4px 4px 2px 2px; min-height: 4px; transition: height 0.5s ease; }
+    .bar-label { font-size: 8px; color: rgba(255,255,255,0.25); }
+
+    /* ── Alert card ── */
+    .alert-card { padding: 18px 20px; }
+    .alert-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .alert-title { font-size: 12px; font-weight: 600; }
+    .toggle {
+      width: 44px; height: 24px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.3s;
+    }
+    .toggle.on { background: #1d4ed8; }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      top: 3px; left: 3px;
+      transition: transform 0.3s;
+    }
+    .toggle.on::after { transform: translateX(20px); }
+    .alert-sub { font-size: 12px; color: var(--muted); }
+    .notif-btn {
+      width: 100%;
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(96,165,250,0.1);
+      border: 1px solid rgba(96,165,250,0.25);
+      color: var(--blue);
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .notif-btn:hover { background: rgba(96,165,250,0.18); }
+    .notif-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .notif-status { font-size: 10px; margin-top: 8px; text-align: center; }
+
+    /* ── Footer ── */
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 2px;
+      margin-bottom: 16px;
+    }
+    .last-update { font-size: 11px; color: rgba(255,255,255,0.55); }
+    .refresh-btn {
+      background: rgba(96,165,250,0.08);
+      border: 1px solid rgba(96,165,250,0.2);
+      color: var(--blue);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 10px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+    .refresh-btn:hover { background: rgba(96,165,250,0.15); }
+    .refresh-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── News card ── */
+    .news-card { padding: 18px 20px; }
+    .news-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .news-toggle-row { display: flex; align-items: center; gap: 10px; }
+    .news-item {
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      margin-bottom: 8px;
+      animation: fadeUp 0.4s ease;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .news-item:hover { background: rgba(255,255,255,0.06); }
+    .news-item:last-child { margin-bottom: 0; }
+    .news-item-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+    .news-tag {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.12em; border-radius: 6px; padding: 3px 10px;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .news-time { font-size: 11px; color: rgba(255,255,255,0.55); white-space: nowrap; }
+    .news-title { font-size: 13px; color: #ffffff; line-height: 1.6; margin-bottom: 4px; }
+    .news-impact { font-size: 11px; color: rgba(255,255,255,0.7); line-height: 1.5; }
+    .news-empty { font-size: 11px; color: rgba(255,255,255,0.25); text-align: center; padding: 16px 0; }
+    .news-loading { font-size: 11px; color: rgba(255,255,255,0.3); text-align: center; padding: 12px 0; }
+    .news-refresh-btn {
+      background: rgba(250,204,21,0.08); border: 1px solid rgba(250,204,21,0.2);
+      color: #facc15; border-radius: 8px; padding: 4px 10px;
+      font-size: 9px; cursor: pointer; font-family: inherit; transition: all 0.2s;
+    }
+    .news-refresh-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .unread-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #facc15; display: inline-block; margin-left: 6px;
+      box-shadow: 0 0 6px #facc15;
+    }
+
+    /* ── Volume card ── */
+    .volume-card { padding: 18px 20px; margin-bottom: 12px; }
+    .volume-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .vol-bars { display: flex; align-items: flex-end; gap: 6px; height: 90px; }
+    .vol-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .vol-bar { width: 100%; border-radius: 5px 5px 2px 2px; min-height: 4px; transition: height 0.6s cubic-bezier(.4,0,.2,1); position: relative; }
+    .vol-bar-val { font-size: 9px; color: rgba(255,255,255,0.5); text-align: center; }
+    .vol-bar-time { font-size: 9px; color: rgba(255,255,255,0.4); }
+
+    /* ── Disclaimer ── */
+    .disclaimer {
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(250,204,21,0.06);
+      border: 1px solid rgba(250,204,21,0.2);
+      font-size: 11px;
+      color: rgba(253,230,138,0.8);
+      line-height: 1.7;
+    }
+
+    /* ── Animations ── */
+    @keyframes ping { 0%,100%{transform:scale(1);opacity:.4} 50%{transform:scale(2.2);opacity:0} }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .fade-up { animation: fadeUp 0.4s ease forwards; }
+    .spin { display:inline-block; animation: spin 1s linear infinite; }
+    .blink { animation: pulse 1.2s ease infinite; }
+
+    /* ── Install banner ── */
+    #install-banner {
+      display: none;
+      background: linear-gradient(135deg, #1d3a6e, #0f1f3d);
+      border: 1px solid rgba(96,165,250,0.3);
+      border-radius: 16px;
+      padding: 16px 18px;
+      margin-bottom: 16px;
+      animation: fadeUp 0.4s ease;
+    }
+    #install-banner.show { display: block; }
+    .install-title { font-size: 13px; font-weight: 600; color: var(--blue); margin-bottom: 6px; }
+    .install-text { font-size: 11px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
+    .install-steps { font-size: 11px; color: rgba(255,255,255,0.5); line-height: 2; }
+    .install-btn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 12px;
+    }
+    .dismiss-btn {
+      width: 100%;
+      padding: 8px;
+      background: transparent;
+      color: var(--muted);
+      border: none;
+      font-family: inherit;
+      font-size: 11px;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Install Banner -->
+  <div id="install-banner">
+    <div class="install-title">📲 Instalar en Android</div>
+    <div class="install-text">Agregá XRP Tracker a tu pantalla de inicio para usarlo como una app, sin abrir el navegador.</div>
+    <div class="install-steps">
+      1. Tocá el menú ⋮ de Chrome<br>
+      2. Seleccioná "Agregar a pantalla de inicio"<br>
+      3. Confirmá con "Agregar"
+    </div>
+    <button class="install-btn" id="install-btn">⬇️ Instalar ahora</button>
+    <button class="dismiss-btn" id="dismiss-btn">Ahora no</button>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <div class="header-title">Monitor de precio</div>
+      <div class="header-name">XRP<span>/USD</span></div>
+    </div>
+    <div class="header-right">
+      <div class="live-row">
+        <div class="dot" id="status-dot"></div>
+        <span class="live-label" id="status-label">en vivo</span>
+      </div>
+      <div class="countdown" id="countdown">próx. en 5:00</div>
+    </div>
+  </div>
+
+  <!-- Price Card -->
+  <div class="card price-card fade-up">
+    <div class="price-glow" id="price-glow"></div>
+    <div class="price-row">
+      <div>
+        <div class="price-value" id="price-display">—</div>
+        <div class="price-usd">USD</div>
+      </div>
+      <div style="padding-bottom:6px">
+        <div class="change-badge" id="change-badge">— %</div>
+        <div class="change-label">24h</div>
+      </div>
+    </div>
+    <svg id="sparkline" viewBox="0 0 300 60" preserveAspectRatio="none">
+      <text x="150" y="35" text-anchor="middle" fill="rgba(255,255,255,0.15)" font-size="11" font-family="IBM Plex Mono">esperando datos...</text>
+    </svg>
+  </div>
+
+  <!-- Sentiment Card -->
+  <div class="card sentiment-card fade-up" id="sentiment-card" style="display:none">
+    <div class="sentiment-header">
+      <div class="sentiment-badge" id="sentiment-badge"></div>
+      <div class="ai-tag">análisis IA</div>
+    </div>
+    <div class="analysis-text" id="analysis-text"></div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row fade-up">
+    <div class="card stat-card">
+      <div class="stat-label">Máx. sesión</div>
+      <div class="stat-value" id="stat-high">—</div>
+      <div class="stat-sub" id="stat-high-sub">USD</div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-label">Mín. sesión</div>
+      <div class="stat-value" id="stat-low">—</div>
+      <div class="stat-sub" id="stat-low-sub">USD</div>
+    </div>
+  </div>
+
+  <!-- History Chart -->
+  <div class="card history-card fade-up" id="history-card" style="display:none">
+    <div class="section-label">Historial de sesión</div>
+    <div class="bars" id="history-bars"></div>
+  </div>
+
+  <!-- Volume Chart -->
+  <div class="card volume-card fade-up" id="volume-card">
+    <div class="volume-header">
+      <div class="section-label" style="margin-bottom:0">📊 Volumen XRP/USDT <span style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:400">· Binance</span></div>
+      <button class="news-refresh-btn" id="volume-refresh-btn" onclick="fetchVolume()">⟳</button>
+    </div>
+    <div id="volume-summary" style="display:none;margin:10px 0 14px;display:flex;gap:16px">
+      <div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.1em">Total 6h</div>
+        <div id="vol-total" style="font-size:16px;font-weight:700;color:#7dd3fc">—</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.1em">Promedio/hora</div>
+        <div id="vol-avg" style="font-size:16px;font-weight:700;color:#6ee7b7">—</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.1em">Tendencia</div>
+        <div id="vol-trend" style="font-size:16px;font-weight:700">—</div>
+      </div>
+    </div>
+    <div id="volume-chart-wrap">
+      <div style="font-size:11px;color:rgba(255,255,255,0.35);text-align:center;padding:16px 0">Cargando volumen desde Binance...</div>
+    </div>
+  </div>
+
+  <!-- News Card -->
+  <div class="card news-card fade-up" id="news-card">
+    <div class="news-header">
+      <div class="news-toggle-row">
+        <div class="section-label" style="margin-bottom:0">📰 Noticias XRP <span id="news-unread" style="display:none" class="unread-dot"></span></div>
+      </div>
+      <button class="news-refresh-btn" id="news-refresh-btn" onclick="fetchNews()">⟳ Buscar</button>
+    </div>
+    <div id="news-list"><div class="news-empty">Tocá "Buscar" para ver noticias recientes</div></div>
+  </div>
+
+  <!-- Alert Card -->
+  <div class="card alert-card fade-up">
+    <div class="alert-row">
+      <div class="alert-title">🔔 Alerta de precio</div>
+      <button class="toggle" id="alert-toggle" onclick="toggleAlert()"></button>
+    </div>
+    <div class="alert-sub">Notificación cuando XRP varíe ±5%</div>
+    <div style="height:12px"></div>
+    <div class="alert-row">
+      <div>
+        <div class="alert-title">📰 Alertas de noticias</div>
+        <div class="alert-sub" style="margin-top:3px">Regulaciones, adopciones y eventos clave</div>
+      </div>
+      <button class="toggle" id="news-alert-toggle" onclick="toggleNewsAlert()"></button>
+    </div>
+    <button class="notif-btn" id="notif-btn" onclick="requestNotifPermission()">
+      Habilitar notificaciones
+    </button>
+    <div class="notif-status" id="notif-status"></div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="last-update" id="last-update"></div>
+    <button class="refresh-btn" id="refresh-btn" onclick="fetchPrice()">⟳ Refrescar</button>
+  </div>
+
+  <div class="disclaimer">
+    ⚠ No es asesoramiento financiero. Precios informativos con posible demora. Invertir en cripto implica riesgos significativos.
+  </div>
+
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────────
+  let priceHistory = [];
+  let alertEnabled = false;
+  let referencePrice = null;
+  let isLoading = false;
+  let deferredPrompt = null;
+  const REFRESH_MS = 5 * 60 * 1000;
+  const ALERT_PCT = 5;
+
+  // ── Service Worker ──────────────────────────────────────
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(console.error);
+  }
+
+  // ── PWA Install ─────────────────────────────────────────
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('install-banner').classList.add('show');
+  });
+
+  document.getElementById('install-btn').onclick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      document.getElementById('install-banner').classList.remove('show');
+    }
+  };
+
+  document.getElementById('dismiss-btn').onclick = () => {
+    document.getElementById('install-banner').classList.remove('show');
+  };
+
+  window.addEventListener('appinstalled', () => {
+    document.getElementById('install-banner').classList.remove('show');
+  });
+
+  // ── Notifications ──────────────────────────────────────
+  async function requestNotifPermission() {
+    if (!('Notification' in window)) {
+      setNotifStatus('❌ Tu navegador no soporta notificaciones', '#f87171');
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted') {
+      setNotifStatus('✓ Notificaciones habilitadas', '#4ade80');
+      document.getElementById('notif-btn').disabled = true;
+      document.getElementById('notif-btn').textContent = '✓ Habilitadas';
+    } else {
+      setNotifStatus('❌ Permiso denegado', '#f87171');
+    }
+  }
+
+  function setNotifStatus(msg, color) {
+    const el = document.getElementById('notif-status');
+    el.textContent = msg;
+    el.style.color = color;
+  }
+
+  function checkAlert(price) {
+    if (!alertEnabled || !referencePrice || Notification.permission !== 'granted') return;
+    const change = ((price - referencePrice) / referencePrice) * 100;
+    if (Math.abs(change) >= ALERT_PCT) {
+      const direction = change > 0 ? 'up' : 'down';
+      navigator.serviceWorker.ready.then(reg => {
+        reg.active.postMessage({ type: 'PRICE_ALERT', price, change, direction });
+      });
+      referencePrice = price; // reset reference
+    }
+  }
+
+  function toggleAlert() {
+    alertEnabled = !alertEnabled;
+    const btn = document.getElementById('alert-toggle');
+    btn.classList.toggle('on', alertEnabled);
+    if (alertEnabled && referencePrice === null && priceHistory.length > 0) {
+      referencePrice = priceHistory[priceHistory.length - 1];
+    }
+    if (alertEnabled && Notification.permission !== 'granted') {
+      requestNotifPermission();
+    }
+  }
+
+  // ── News State ──────────────────────────────────────────
+  let newsAlertEnabled = false;
+  let seenNewsIds = new Set();
+  let isFetchingNews = false;
+  const NEWS_REFRESH_MS = 15 * 60 * 1000; // every 15 min
+
+  function toggleNewsAlert() {
+    newsAlertEnabled = !newsAlertEnabled;
+    document.getElementById('news-alert-toggle').classList.toggle('on', newsAlertEnabled);
+    if (newsAlertEnabled && Notification.permission !== 'granted') requestNotifPermission();
+  }
+
+  function newsId(item) {
+    return (item.title || '').slice(0, 40).toLowerCase().replace(/\s+/g, '-');
+  }
+
+  async function fetchNews() {
+    if (isFetchingNews) return;
+    isFetchingNews = true;
+    const btn = document.getElementById('news-refresh-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin">⟳</span>';
+    document.getElementById('news-list').innerHTML = '<div class="news-loading"><span class="blink">Buscando noticias...</span></div>';
+
+    try {
+      // CoinGecko news for XRP via RSS2JSON (public, no key needed)
+      const feed = 'https://cointelegraph.com/rss/tag/ripple';
+      const res  = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed)}&count=10`);
+      if (!res.ok) throw new Error('RSS error');
+      const data = await res.json();
+      if (data.status !== 'ok') throw new Error('RSS fail');
+
+      const keywords = {
+        'regulación': ['regulac','sec','cftc','ley','legal','gobierno','policy','regulation','compliance','ban','autoridad'],
+        'adopción':   ['adopc','banco','bank','partner','integra','launch','ripplenet','swift','payment','acuerdo','deal'],
+        'legal':      ['lawsuit','demanda','fallo','court','juicio','ruling','judge','settlement','verdict'],
+        'tecnología': ['update','protocol','upgrade','ledger','xrpl','amm','hook','smart contract','version'],
+        'mercado':    ['precio','price','etf','fund','inversión','bull','bear','rally','crash','pump','dump','market'],
+      };
+
+      const items = (data.items || []).slice(0, 8).map(item => {
+        const text = (item.title + ' ' + (item.description || '')).toLowerCase();
+        let category = 'mercado';
+        for (const [cat, words] of Object.entries(keywords)) {
+          if (words.some(w => text.includes(w))) { category = cat; break; }
+        }
+        const bullish = ['adopc','bank','partner','launch','acuerdo','deal','etf','fund','integra'].some(w => text.includes(w));
+        const bearish  = ['ban','demanda','lawsuit','crash','dump','regulac','sec'].some(w => text.includes(w));
+        const impact   = bullish ? 'alcista' : bearish ? 'bajista' : 'neutral';
+
+        const pub  = new Date(item.pubDate);
+        const diff = Math.round((Date.now() - pub) / 3600000);
+        const time = diff < 1 ? 'hace menos de 1h' : diff < 24 ? `hace ${diff}h` : `hace ${Math.round(diff/24)}d`;
+
+        return {
+          title:    item.title.replace(/<[^>]+>/g, '').slice(0, 90),
+          category,
+          impact,
+          summary:  (item.description || '').replace(/<[^>]+>/g, '').slice(0, 120) + '...',
+          time,
+          link:     item.link
+        };
+      });
+
+      renderNews(items);
+    } catch(e) {
+      document.getElementById('news-list').innerHTML = '<div class="news-empty">Error al buscar noticias. Intentá de nuevo.</div>';
+    } finally {
+      isFetchingNews = false;
+      btn.disabled = false;
+      btn.textContent = '⟳ Buscar';
+    }
+  }
+
+  function renderNews(items) {
+    const container = document.getElementById('news-list');
+    if (!items.length) {
+      container.innerHTML = '<div class="news-empty">Sin noticias relevantes en las últimas 48h</div>';
+      return;
+    }
+
+    const catColors = {
+      'regulación':  { bg: 'rgba(96,165,250,0.12)',  color: '#60a5fa',  border: 'rgba(96,165,250,0.25)'  },
+      'adopción':    { bg: 'rgba(74,222,128,0.12)',   color: '#4ade80',  border: 'rgba(74,222,128,0.25)'  },
+      'legal':       { bg: 'rgba(248,113,113,0.12)',  color: '#f87171',  border: 'rgba(248,113,113,0.25)' },
+      'mercado':     { bg: 'rgba(250,204,21,0.12)',   color: '#facc15',  border: 'rgba(250,204,21,0.25)'  },
+      'tecnología':  { bg: 'rgba(167,139,250,0.12)',  color: '#a78bfa',  border: 'rgba(167,139,250,0.25)' },
+    };
+    const impactEmoji = { 'alcista': '📈', 'bajista': '📉', 'neutral': '➡️' };
+
+    let newItems = 0;
+    container.innerHTML = items.map(item => {
+      const id = newsId(item);
+      const isNew = !seenNewsIds.has(id);
+      if (isNew) newItems++;
+      const c = catColors[item.category] || catColors['mercado'];
+      return `<div class="news-item" onclick="openNews('${id}', this, '${(item.link||'').replace(/'/g,'')}')">
+        <div class="news-item-header">
+          <span class="news-tag" style="background:${c.bg};color:${c.color};border:1px solid ${c.border}">${item.category}</span>
+          <span class="news-time">${item.time || ''} ${isNew ? '🔵' : ''}</span>
+        </div>
+        <div class="news-title">${item.title}</div>
+        <div class="news-impact">${impactEmoji[item.impact] || ''} ${item.summary}</div>
+      </div>`;
+    }).join('');
+
+    // Notify for new important items
+    if (newItems > 0) {
+      document.getElementById('news-unread').style.display = 'inline-block';
+      if (newsAlertEnabled && Notification.permission === 'granted') {
+        const important = items.filter(i => !seenNewsIds.has(newsId(i)) && i.impact !== 'neutral');
+        if (important.length > 0) {
+          navigator.serviceWorker.ready.then(reg => {
+            reg.active.postMessage({
+              type: 'NEWS_ALERT',
+              title: important[0].title,
+              category: important[0].category,
+              impact: important[0].impact,
+              summary: important[0].summary
+            });
+          });
+        }
+      }
+    }
+
+    // Mark all as seen
+    items.forEach(i => seenNewsIds.add(newsId(i)));
+  }
+
+  function openNews(id, el, link) {
+    markRead(id, el);
+    if (link) window.open(link, '_blank');
+  }
+
+  function markRead(id, el) {
+    seenNewsIds.add(id);
+    const dot = el.querySelector('.news-time');
+    if (dot) dot.textContent = dot.textContent.replace('🔵', '').trim();
+    // Hide unread dot if no more unread
+    document.getElementById('news-unread').style.display = 'none';
+  }
+
+  // Auto-fetch news every 15 min
+  setInterval(fetchNews, NEWS_REFRESH_MS);
+
+  
+  // ── Fetch Volume via CryptoCompare (CORS abierto, sin key) ─
+  async function fetchVolume() {
+    const btn = document.getElementById('volume-refresh-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin">⟳</span>';
+    document.getElementById('volume-chart-wrap').innerHTML =
+      '<div style="font-size:11px;color:rgba(255,255,255,0.35);text-align:center;padding:16px 0" class="blink">Cargando volumen...</div>';
+
+    try {
+      const res = await fetch(
+        'https://min-api.cryptocompare.com/data/v2/histohour?fsym=XRP&tsym=USDT&limit=6&e=Binance'
+      );
+      if (!res.ok) throw new Error('CryptoCompare error ' + res.status);
+      const json = await res.json();
+      if (json.Response === 'Error') throw new Error(json.Message);
+
+      const candles = json.Data.Data.slice(-6).map(k => ({
+        time:  new Date(k.time * 1000),
+        vol:   k.volumefrom,
+        qvol:  k.volumeto,
+        close: k.close,
+        open:  k.open,
+      }));
+
+      renderVolumeChart(candles);
+    } catch(e) {
+      document.getElementById('volume-chart-wrap').innerHTML =
+        '<div style="font-size:11px;color:#fca5a5;text-align:center;padding:12px 0">Error al cargar volumen. Tocá ⟳ para reintentar.</div>';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '⟳';
+    }
+  }
+
+  function fmtVol(n) {
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+    if (n >= 1_000)     return (n / 1_000).toFixed(0) + 'K';
+    return n.toFixed(0);
+  }
+
+  function renderVolumeChart(candles) {
+    const maxVol = Math.max(...candles.map(c => c.qvol));
+    const minVol = Math.min(...candles.map(c => c.qvol));
+    const total  = candles.reduce((s, c) => s + c.qvol, 0);
+    const avg    = total / candles.length;
+
+    // Trend: compare last 3 vs first 3
+    const first3 = candles.slice(0, 3).reduce((s,c) => s+c.qvol, 0) / 3;
+    const last3  = candles.slice(3).reduce((s,c) => s+c.qvol, 0) / 3;
+    const trendPct = ((last3 - first3) / first3) * 100;
+    const trendUp  = trendPct >= 0;
+
+    // Summary
+    document.getElementById('vol-total').textContent  = '$' + fmtVol(total);
+    document.getElementById('vol-avg').textContent    = '$' + fmtVol(avg) + '/h';
+    document.getElementById('vol-trend').textContent  = (trendUp ? '▲ +' : '▼ ') + Math.abs(trendPct).toFixed(1) + '%';
+    document.getElementById('vol-trend').style.color  = trendUp ? '#6ee7b7' : '#fca5a5';
+    document.getElementById('volume-summary').style.display = 'flex';
+
+    // Bars
+    const bars = candles.map((c, i) => {
+      const hPct   = ((c.qvol - minVol) / (maxVol - minVol || 1)) * 70 + 14;
+      const isUp   = c.close >= c.open;
+      const isMax  = c.qvol === maxVol;
+      const color  = isMax
+        ? 'linear-gradient(180deg,#fde68a,#f59e0b)'
+        : isUp
+        ? 'linear-gradient(180deg,#6ee7b7,#059669)'
+        : 'linear-gradient(180deg,#fca5a5,#dc2626)';
+      const h = candles[i].time;
+      const label = h.getHours().toString().padStart(2,'0') + ':00';
+      return `<div class="vol-bar-wrap">
+        <div class="vol-bar-val">${fmtVol(c.qvol)}</div>
+        <div style="width:100%;display:flex;align-items:flex-end;height:70px">
+          <div class="vol-bar" style="height:${hPct}px;background:${color};box-shadow:${isMax?'0 0 10px rgba(253,230,138,0.4)':'none'}"></div>
+        </div>
+        <div class="vol-bar-time">${label}</div>
+      </div>`;
+    }).join('');
+
+    document.getElementById('volume-chart-wrap').innerHTML =
+      `<div class="vol-bars">${bars}</div>
+       <div style="font-size:9px;color:rgba(255,255,255,0.3);margin-top:10px;text-align:right">
+         🟡 mayor volumen &nbsp;🟢 vela alcista &nbsp;🔴 vela bajista
+       </div>`;
+  }
+
+  // Auto-fetch volume every 5 min along with price
+  const _origFetchPrice = fetchPrice;
+
+  // Fetch volume on load and every 5 min
+  setTimeout(fetchVolume, 1500);
+  setInterval(fetchVolume, REFRESH_MS);
+
+  // ── Fetch Price via CoinCap (CORS abierto, sin API key) ──
+  async function fetchPrice() {
+    if (isLoading) return;
+    isLoading = true;
+    setStatus('loading');
+    document.getElementById('refresh-btn').disabled = true;
+    document.getElementById('refresh-btn').innerHTML = '<span class="spin">⟳</span>';
+
+    try {
+      const res = await fetch('https://api.kraken.com/0/public/Ticker?pair=XRPUSD');
+      if (!res.ok) throw new Error('Kraken error ' + res.status);
+      const json = await res.json();
+      const ticker = json.result['XXRPZUSD'] || json.result['XRPUSD'];
+      const price     = parseFloat(ticker.c[0]);
+      const open24h   = parseFloat(ticker.o);
+      const change24h = ((price - open24h) / open24h) * 100;
+
+      const sentiment = change24h > 2 ? 'alcista' : change24h < -2 ? 'bajista' : 'neutral';
+      const analysis  = change24h > 2
+        ? 'XRP muestra momentum positivo en las últimas 24 horas. El volumen de compras supera al de ventas.'
+        : change24h < -2
+        ? 'XRP presenta presión vendedora en las últimas 24 horas. Los traders están tomando ganancias.'
+        : 'XRP se mantiene estable sin movimientos significativos en las últimas 24 horas.';
+
+      updateUI({ price, change24h, sentiment, analysis });
+      checkAlert(price);
+    } catch (e) {
+      setStatus('error');
+      document.getElementById('status-label').textContent = 'error';
+    } finally {
+      isLoading = false;
+      document.getElementById('refresh-btn').disabled = false;
+      document.getElementById('refresh-btn').textContent = '⟳ Refrescar';
+      resetCountdown();
+    }
+  }
+
+  // ── Update UI ───────────────────────────────────────────
+  function updateUI({ price, change24h, sentiment, analysis }) {
+    const isUp = change24h >= 0;
+
+    // Price
+    document.getElementById('price-display').textContent = '$' + price.toFixed(4);
+
+    // Change badge
+    const badge = document.getElementById('change-badge');
+    badge.textContent = (isUp ? '▲ +' : '▼ ') + change24h.toFixed(2) + '%';
+    badge.style.color = isUp ? '#4ade80' : '#f87171';
+    badge.style.background = isUp ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)';
+    badge.style.border = `1px solid ${isUp ? 'rgba(74,222,128,0.25)' : 'rgba(248,113,113,0.25)'}`;
+
+    // Glow
+    document.getElementById('price-glow').style.background =
+      isUp ? 'rgba(74,222,128,0.07)' : 'rgba(248,113,113,0.07)';
+
+    // History
+    priceHistory.push(price);
+    if (priceHistory.length > 20) priceHistory.shift();
+    if (referencePrice === null) referencePrice = price;
+
+    // Stats
+    const hi = Math.max(...priceHistory);
+    const lo = Math.min(...priceHistory);
+    document.getElementById('stat-high').textContent = '$' + hi.toFixed(4);
+    document.getElementById('stat-low').textContent = '$' + lo.toFixed(4);
+    document.getElementById('stat-high').style.color = '#4ade80';
+    document.getElementById('stat-low').style.color = '#f87171';
+
+    // Sparkline
+    drawSparkline(priceHistory, isUp ? '#4ade80' : '#f87171');
+
+    // History bars
+    if (priceHistory.length >= 3) {
+      drawBars(priceHistory);
+      document.getElementById('history-card').style.display = 'block';
+    }
+
+    // Sentiment
+    if (sentiment && analysis) {
+      const color = sentiment === 'alcista' ? '#4ade80' : sentiment === 'bajista' ? '#f87171' : '#facc15';
+      const emoji = sentiment === 'alcista' ? '📈' : sentiment === 'bajista' ? '📉' : '➡️';
+      const badge2 = document.getElementById('sentiment-badge');
+      badge2.textContent = `${emoji} ${sentiment}`;
+      badge2.style.color = color;
+      badge2.style.background = `${color}15`;
+      badge2.style.border = `1px solid ${color}30`;
+      document.getElementById('analysis-text').textContent = `"${analysis}"`;
+      document.getElementById('sentiment-card').style.display = 'block';
+    }
+
+    // Last update
+    document.getElementById('last-update').textContent =
+      'Actualizado: ' + new Date().toLocaleTimeString('es-AR');
+
+    setStatus('live');
+  }
+
+  // ── Sparkline ───────────────────────────────────────────
+  function drawSparkline(data, color) {
+    if (data.length < 2) return;
+    const svg = document.getElementById('sparkline');
+    const W = 300, H = 60;
+    const min = Math.min(...data), max = Math.max(...data);
+    const range = max - min || 0.001;
+
+    const pts = data.map((v, i) => {
+      const x = (i / (data.length - 1)) * W;
+      const y = H - ((v - min) / range) * (H - 12) - 6;
+      return [x, y];
+    });
+
+    const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+    const area = line + ` L${W},${H} L0,${H} Z`;
+
+    const id = 'sg' + Date.now();
+    svg.innerHTML = `
+      <defs>
+        <linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="${area}" fill="url(#${id})"/>
+      <path d="${line}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${pts[pts.length-1][0]}" cy="${pts[pts.length-1][1]}" r="3.5" fill="${color}"/>
+    `;
+  }
+
+  // ── Bar Chart ───────────────────────────────────────────
+  function drawBars(data) {
+    const container = document.getElementById('history-bars');
+    const max = Math.max(...data);
+    const min = Math.min(...data);
+    const range = max - min || 0.001;
+    const labels = data.map((_, i) => {
+      const idx = data.length - i - 1;
+      if (idx === 0) return 'ahora';
+      return `-${idx * 5}m`;
+    }).reverse();
+
+    container.innerHTML = data.map((v, i) => {
+      const h = Math.max(((v - min) / range) * 56 + 4, 4);
+      const isHi = v === max;
+      const color = isHi ? '#4ade80' : 'rgba(96,165,250,0.5)';
+      return `<div class="bar-wrap">
+        <div class="bar" style="height:${h}px;background:${color};"></div>
+        <div class="bar-label">${labels[i]}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Status ──────────────────────────────────────────────
+  function setStatus(state) {
+    const dot = document.getElementById('status-dot');
+    const label = document.getElementById('status-label');
+    dot.className = 'dot ' + (state === 'error' ? 'error' : state === 'loading' ? 'loading' : '');
+    label.textContent = state === 'loading' ? 'actualizando...' : state === 'error' ? 'error' : 'en vivo';
+    if (state === 'loading') label.classList.add('blink');
+    else label.classList.remove('blink');
+  }
+
+  // ── Countdown ───────────────────────────────────────────
+  let countdownSec = REFRESH_MS / 1000;
+  function resetCountdown() { countdownSec = REFRESH_MS / 1000; }
+
+  setInterval(() => {
+    countdownSec = Math.max(0, countdownSec - 1);
+    const m = Math.floor(countdownSec / 60);
+    const s = String(countdownSec % 60).padStart(2, '0');
+    document.getElementById('countdown').textContent = `próx. en ${m}:${s}`;
+  }, 1000);
+
+  // ── Auto refresh ────────────────────────────────────────
+  setInterval(fetchPrice, REFRESH_MS);
+
+  // ── Init ────────────────────────────────────────────────
+  fetchPrice();
+
+  // Check existing notification permission
+  if (Notification.permission === 'granted') {
+    document.getElementById('notif-btn').disabled = true;
+    document.getElementById('notif-btn').textContent = '✓ Notificaciones habilitadas';
+    setNotifStatus('✓ Ya tenés notificaciones activas', '#4ade80');
+  }
+</script>
+</body>
+</html>
